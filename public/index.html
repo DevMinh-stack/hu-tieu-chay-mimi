@@ -73,6 +73,7 @@
             border-radius: 8px;
             display: flex;
             justify-content: space-between;
+            align-items: center;
             transition: transform 0.3s ease;
         }
         #cart-items li:hover {
@@ -131,7 +132,7 @@
     <script>
         // Initialize EmailJS with your Public Key
         (function(){
-            emailjs.init("il9n1OY8isd5iv5UWv1HR"); // Your EmailJS Public Key
+            emailjs.init("il9n1OY8isd5iv5UWv1HR");
         })();
 
         // Three.js 3D Scene
@@ -220,11 +221,29 @@
 
         function addToCart(name, price) {
             cart.push({ name, price });
-            document.getElementById("cart-items").innerHTML = cart.map(item => `
-                <li>${item.name} <span>${item.price}</span></li>
+            updateCartDisplay();
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartDisplay();
+        }
+
+        function updateCartDisplay() {
+            document.getElementById("cart-items").innerHTML = cart.map((item, index) => `
+                <li>
+                    ${item.name} <span>${item.price}</span>
+                    <button onclick='removeFromCart(${index})' class='text-red-500 hover:text-red-700'>
+                        <i class="ph ph-trash"></i>
+                    </button>
+                </li>
             `).join('');
             document.getElementById("cart-count").innerText = cart.length;
-            document.getElementById("cart-count").classList.remove("hidden");
+            if (cart.length > 0) {
+                document.getElementById("cart-count").classList.remove("hidden");
+            } else {
+                document.getElementById("cart-count").classList.add("hidden");
+            }
             updateTotal();
             gsap.from("#cart-items li:last-child", { opacity: 0, y: 20, duration: 0.5, ease: "power2.out" });
         }
@@ -304,10 +323,7 @@
                 .then(data => {
                     alert("Đơn hàng đã được gửi thành công!");
                     cart = [];
-                    document.getElementById("cart-items").innerHTML = "";
-                    document.getElementById("cart-count").innerText = "0";
-                    document.getElementById("cart-count").classList.add("hidden");
-                    document.getElementById("cart-total").innerText = "Tổng: 0 VNĐ";
+                    updateCartDisplay();
                     dialog.remove();
                 })
                 .catch(error => {
