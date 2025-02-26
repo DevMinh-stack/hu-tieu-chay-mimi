@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quán Chay Minh Nhi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #e9f5db, #ffffff);
+            margin: 0;
+            overflow-x: hidden;
+        }
+        header {
+            background: linear-gradient(to right, #2d6a4f, #52b788);
+            padding: 2rem;
+            position: relative;
+            height: 200px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+        #logo {
+            width: 50px;
+            height: 50px;
+            margin-right: 15px;
+            border-radius: 50%;
+        }
+        #threejs-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        #animated-title {
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            font-size: 2.5rem;
+            color: #ffffff;
+        }
+        nav {
+            background: #40916c;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        nav ul li a {
+            transition: all 0.3s ease;
+        }
+        nav ul li a:hover {
+            color: #fefae0;
+            transform: scale(1.1) rotate(2deg);
+        }
+        .menu-item {
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+        }
+        .menu-item:hover {
+            transform: translateY(-10px) rotate(2deg);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+        #cart-items li {
+            background: #f9fafb;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            transition: transform 0.3s ease;
+        }
+        #cart-items li:hover {
+            transform: scale(1.02);
+        }
+        footer {
+            background: #1b4332;
+        }
+    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.com/npm/@emailjs/browser@3/dist/email.min.js"></script>
+</head>
+<body>
+    <header class="text-white shadow-lg relative">
+        <canvas id="threejs-canvas"></canvas>
+        <div class="header-content">
+            <img id="logo" src="https://via.placeholder.com/50x50?text=Logo" alt="Logo Quán Chay Minh Nhi">
+            <span id="animated-title">Quán Chay Minh Nhi</span>
+        </div>
+    </header>
+
+    <nav class="text-white p-4 text-center relative">
+        <ul class="flex justify-center space-x-8">
+            <li><a href="#menu" class="flex items-center text-lg"><i class="ph ph-list mr-2"></i> Thực Đơn</a></li>
+            <li><a href="#about" class="flex items-center text-lg"><i class="ph ph-info mr-2"></i> Giới Thiệu</a></li>
+            <li><a href="#contact" class="flex items-center text-lg"><i class="ph ph-phone mr-2"></i> Liên Hệ</a></li>
+            <li class="relative">
+                <a href="#cart" class="flex items-center text-lg">
+                    <i class="ph ph-shopping-cart mr-2"></i> Giỏ Hàng
+                    <span id="cart-count" class="absolute -top-3 -right-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full hidden">0</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <section id="menu" class="container mx-auto p-8">
+        <h2 class="text-4xl font-bold text-center mb-10 text-gray-800">Thực Đơn</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8" id="menu-list"></div>
+    </section>
+
+    <section id="cart" class="container mx-auto p-8 text-center bg-white shadow-lg rounded-lg my-10">
+        <h2 class="text-3xl font-bold mb-6 text-gray-800">Giỏ Hàng</h2>
+        <ul id="cart-items" class="text-gray-700 text-lg p-4 border rounded-lg bg-gray-100"></ul>
+        <p id="cart-total" class="text-green-600 font-bold text-xl mt-4">Tổng: 0 VNĐ</p>
+        <button id="clear-cart" class="mt-6 px-6 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition">Đặt hàng</button>
+    </section>
+
+    <footer class="text-white text-center p-6 text-lg font-medium">
+        © 2025 Quán Chay Minh Nhi - All Rights Reserved.
+    </footer>
+
+    <script>
+        // Initialize EmailJS with your Public Key
+        (function(){
+            emailjs.init("il9n1OY8isd5iv5UWv1HR"); // Your EmailJS Public Key
+        })();
+
+        // Three.js 3D Scene
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / 200, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('threejs-canvas'), alpha: true });
+        renderer.setSize(window.innerWidth, 200);
+        camera.position.z = 15;
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 1);
+        pointLight.position.set(10, 10, 10);
+        scene.add(pointLight);
+
+        const veggies = [];
+        const veggieGeometries = [
+            new THREE.SphereGeometry(1, 32, 32),
+            new THREE.CylinderGeometry(0.5, 0.5, 2, 32),
+            new THREE.SphereGeometry(1.2, 32, 32)
+        ];
+        const textureLoader = new THREE.TextureLoader();
+        const veggieTextures = [
+            textureLoader.load('https://textures.com/system/gallery/photos/Food/Tomato/139318/Tomato_139318_diffuse.jpg'),
+            textureLoader.load('https://textures.com/system/gallery/photos/Food/Carrot/139287/Carrot_139287_diffuse.jpg'),
+            textureLoader.load('https://textures.com/system/gallery/photos/Food/Broccoli/139262/Broccoli_139262_diffuse.jpg')
+        ];
+
+        for (let i = 0; i < 6; i++) {
+            const veggie = new THREE.Mesh(
+                veggieGeometries[i % 3],
+                new THREE.MeshPhongMaterial({ map: veggieTextures[i % 3] })
+            );
+            veggie.position.set(
+                (Math.random() - 0.5) * 30,
+                (Math.random() - 0.5) * 10,
+                (Math.random() - 0.5) * 10
+            );
+            veggie.rotation.set(Math.random(), Math.random(), Math.random());
+            veggie.startTime = Math.random() * 10;
+            veggies.push(veggie);
+            scene.add(veggie);
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            veggies.forEach(veg => {
+                veg.rotation.x += 0.01;
+                veg.rotation.y += 0.01;
+                const time = Date.now() * 0.001 + veg.startTime;
+                veg.position.x += Math.sin(time) * 0.05;
+                veg.position.y += Math.cos(time) * 0.05;
+            });
+            renderer.render(scene, camera);
+        }
+        animate3D();
+
+        // Menu items
+        const menuItems = [
+            { name: "Hủ tiếu chay", img: "https://i-giadinh.vnecdn.net/2023/08/31/Bc6Thnhphm16-1693466846-1850-1693466989.jpg", price: "35.000 VNĐ" },
+            { name: "Mì chay", img: "https://i-giadinh.vnecdn.net/2023/08/31/Bc6Thnhphm16-1693466846-1850-1693466989.jpg", price: "30.000 VNĐ" },
+            { name: "Bún măng chay", img: "https://i-giadinh.vnecdn.net/2023/08/31/Bc6Thnhphm16-1693466846-1850-1693466989.jpg", price: "40.000 VNĐ" },
+            { name: "Bún bò Huế chay", img: "https://i-giadinh.vnecdn.net/2023/08/31/Bc6Thnhphm16-1693466846-1850-1693466989.jpg", price: "45.000 VNĐ" },
+            { name: "Bún miến chay", img: "https://i-giadinh.vnecdn.net/2023/08/31/Bc6Thnhphm16-1693466846-1850-1693466989.jpg", price: "38.000 VNĐ" },
+            { name: "Bún gạo chay", img: "https://i-giadinh.vnecdn.net/2023/08/31/Bc6Thnhphm16-1693466846-1850-1693466989.jpg", price: "37.000 VNĐ" }
+        ];
+
+        menuItems.forEach((item, index) => {
+            document.getElementById("menu-list").innerHTML += `
+                <div class='bg-white p-6 shadow-lg rounded-lg text-center menu-item'>
+                    <img src='${item.img}' class='mx-auto mb-4 rounded-lg w-48 h-36 object-cover' alt='${item.name}'>
+                    <h3 class='text-xl font-semibold text-gray-800'>${item.name}</h3>
+                    <p class='text-green-700 font-bold mt-2'>${item.price}</p>
+                    <button onclick='addToCart("${item.name}", "${item.price}")' class='mt-4 px-4 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition'>Thêm vào giỏ</button>
+                </div>`;
+            gsap.from(`.menu-item:nth-child(${index + 2})`, {
+                opacity: 0,
+                y: 50,
+                duration: 1,
+                delay: index * 0.2,
+                ease: "power2.out"
+            });
+        });
+
+        let cart = [];
+
+        function addToCart(name, price) {
+            cart.push({ name, price });
+            document.getElementById("cart-items").innerHTML = cart.map(item => `
+                <li>${item.name} <span>${item.price}</span></li>
+            `).join('');
+            document.getElementById("cart-count").innerText = cart.length;
+            document.getElementById("cart-count").classList.remove("hidden");
+            updateTotal();
+            gsap.from("#cart-items li:last-child", { opacity: 0, y: 20, duration: 0.5, ease: "power2.out" });
+        }
+
+        function updateTotal() {
+            const total = cart.reduce((sum, item) => {
+                return sum + parseInt(item.price.replace(".", "").replace(" VNĐ", ""));
+            }, 0);
+            document.getElementById("cart-total").innerText = `Tổng: ${total.toLocaleString()} VNĐ`;
+        }
+
+        // "Đặt hàng" button setup
+        document.getElementById("clear-cart").innerText = "Đặt hàng";
+        document.getElementById("clear-cart").classList.remove("bg-red-600", "hover:bg-red-700");
+        document.getElementById("clear-cart").classList.add("bg-green-600", "hover:bg-green-700");
+        document.getElementById("clear-cart").onclick = function() {
+            if (cart.length === 0) {
+                alert("Giỏ hàng trống! Vui lòng thêm món trước khi đặt hàng.");
+                return;
+            }
+            showOrderDialog();
+        };
+
+        function showOrderDialog() {
+            const dialog = document.createElement('div');
+            dialog.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50';
+            dialog.innerHTML = `
+                <div class='bg-white p-6 rounded-lg shadow-lg w-96'>
+                    <h3 class='text-xl font-bold mb-4 text-gray-800'>Thông tin đặt hàng</h3>
+                    <form id='order-form'>
+                        <div class='mb-4'>
+                            <label class='block text-gray-700 mb-2' for='customer-name'>Họ và tên:</label>
+                            <input type='text' id='customer-name' class='w-full p-2 border rounded-lg' required>
+                        </div>
+                        <div class='mb-4'>
+                            <label class='block text-gray-700 mb-2' for='phone'>Số điện thoại:</label>
+                            <input type='tel' id='phone' class='w-full p-2 border rounded-lg' required>
+                        </div>
+                        <div class='mb-4'>
+                            <label class='block text-gray-700 mb-2' for='address'>Địa chỉ giao hàng:</label>
+                            <input type='text' id='address' class='w-full p-2 border rounded-lg' required>
+                        </div>
+                        <p class='text-green-700 font-bold mb-4'>Tổng tiền: ${document.getElementById("cart-total").innerText.split("Tổng: ")[1]}</p>
+                        <div class='flex justify-end space-x-4'>
+                            <button type='button' onclick='this.closest(".fixed").remove()' class='px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600'>Hủy</button>
+                            <button type='submit' id='submit-btn' class='px-4 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition'>Gửi yêu cầu</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            document.body.appendChild(dialog);
+
+            const submitBtn = document.getElementById('submit-btn');
+            document.getElementById('order-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                // Show loading state
+                submitBtn.textContent = 'Đang gửi...';
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+                const customerName = document.getElementById('customer-name').value;
+                const phone = document.getElementById('phone').value;
+                const address = document.getElementById('address').value;
+                const cartItems = cart.map(item => `${item.name}: ${item.price}`).join(", ");
+                const total = document.getElementById("cart-total").innerText.split("Tổng: ")[1];
+
+                fetch('http://localhost:3000/send-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customerName, phone, address, cartItems, total })
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
+                .then(data => {
+                    alert("Đơn hàng đã được gửi thành công!");
+                    cart = [];
+                    document.getElementById("cart-items").innerHTML = "";
+                    document.getElementById("cart-count").innerText = "0";
+                    document.getElementById("cart-count").classList.add("hidden");
+                    document.getElementById("cart-total").innerText = "Tổng: 0 VNĐ";
+                    dialog.remove();
+                })
+                .catch(error => {
+                    alert("Có lỗi xảy ra: " + error);
+                })
+                .finally(() => {
+                    // Reset button state
+                    submitBtn.textContent = 'Gửi yêu cầu';
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                });
+            });
+
+            gsap.from(dialog.querySelector('.bg-white'), { opacity: 0, y: 50, duration: 0.5, ease: "power2.out" });
+        }
+
+        // Animate title
+        gsap.to("#animated-title", {
+            scale: 1.02,
+            duration: 1.5,
+            repeat: -1,
+            yoyo: true,
+            ease: "sine.inOut"
+        });
+    </script>
+</body>
+</html>
